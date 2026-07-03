@@ -4,6 +4,7 @@ import { useUiStateStore } from 'src/stores/uiStateStore';
 import { useInteractionManager } from 'src/interaction/useInteractionManager';
 import { Grid } from 'src/components/Grid/Grid';
 import { Cursor } from 'src/components/Cursor/Cursor';
+import { RubberBand } from 'src/components/RubberBand/RubberBand';
 import { Nodes } from 'src/components/SceneLayers/Nodes/Nodes';
 import { Rectangles } from 'src/components/SceneLayers/Rectangles/Rectangles';
 import { Connectors } from 'src/components/SceneLayers/Connectors/Connectors';
@@ -26,6 +27,9 @@ export const Renderer = ({ showGrid, backgroundColor }: RendererProps) => {
   });
   const uiStateActions = useUiStateStore((state) => {
     return state.actions;
+  });
+  const selectedItems = useUiStateStore((state) => {
+    return state.selectedItems;
   });
   const { setInteractionsElement } = useInteractionManager();
   const { items, rectangles, connectors, textBoxes } = useScene();
@@ -57,7 +61,7 @@ export const Renderer = ({ showGrid, backgroundColor }: RendererProps) => {
       }}
     >
       <SceneLayer>
-        <Rectangles rectangles={rectangles} />
+        <Rectangles rectangles={rectangles} selectedItems={selectedItems} />
       </SceneLayer>
       <Box
         sx={{
@@ -76,10 +80,13 @@ export const Renderer = ({ showGrid, backgroundColor }: RendererProps) => {
         </SceneLayer>
       )}
       <SceneLayer>
-        <Connectors connectors={connectors} />
+        <RubberBand />
       </SceneLayer>
       <SceneLayer>
-        <TextBoxes textBoxes={textBoxes} />
+        <Connectors connectors={connectors} selectedItems={selectedItems} />
+      </SceneLayer>
+      <SceneLayer>
+        <TextBoxes textBoxes={textBoxes} selectedItems={selectedItems} />
       </SceneLayer>
       <SceneLayer>
         <ConnectorLabels connectors={connectors} />
@@ -101,7 +108,7 @@ export const Renderer = ({ showGrid, backgroundColor }: RendererProps) => {
         }}
       />
       <SceneLayer>
-        <Nodes nodes={items} />
+        <Nodes nodes={items} selectedItems={selectedItems} />
       </SceneLayer>
       <SceneLayer>
         <TransformControlsManager />

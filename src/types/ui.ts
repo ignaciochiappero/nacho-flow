@@ -124,6 +124,11 @@ export interface ContextMenu {
   type?: 'item' | 'create';
 }
 
+export interface RubberBand {
+  from: Coords;
+  to: Coords;
+}
+
 export const LayerOrderingActionOptions = {
   BRING_TO_FRONT: 'BRING_TO_FRONT',
   SEND_TO_BACK: 'SEND_TO_BACK',
@@ -142,6 +147,8 @@ export interface UiState {
   dialog: keyof typeof DialogTypeEnum | null;
   isMainMenuOpen: boolean;
   itemControls: ItemControls | null;
+  selectedItems: ItemReference[];
+  rubberBand: RubberBand | null;
   contextMenu: ContextMenu | null;
   zoom: number;
   scroll: Scroll;
@@ -164,6 +171,8 @@ export interface UiStateActions {
   setZoom: (zoom: number) => void;
   setScroll: (scroll: Scroll) => void;
   setItemControls: (itemControls: ItemControls | null) => void;
+  setSelectedItems: (selectedItems: ItemReference[]) => void;
+  setRubberBand: (rubberBand: RubberBand | null) => void;
   setContextMenu: (contextMenu: ContextMenu | null) => void;
   setMouse: (mouse: Mouse) => void;
   setRendererEl: (el: HTMLDivElement) => void;

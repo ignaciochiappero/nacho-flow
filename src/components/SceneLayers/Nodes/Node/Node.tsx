@@ -15,9 +15,10 @@ import { MarkdownEditor } from 'src/components/MarkdownEditor/MarkdownEditor';
 interface Props {
   node: ViewItem;
   order: number;
+  isSelected?: boolean;
 }
 
-export const Node = ({ node, order }: Props) => {
+export const Node = ({ node, order, isSelected }: Props) => {
   const modelItem = useModelItem(node.id);
 
   if (!modelItem) return null;
@@ -81,7 +82,14 @@ export const Node = ({ node, order }: Props) => {
           <Box
             sx={{
               position: 'absolute',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              border: isSelected ? '3px solid' : 'none',
+              borderColor: '#d32f2f',
+              borderRadius: '8px',
+              boxShadow: isSelected
+                ? '0 0 0 4px rgba(211, 47, 47, 0.4), 0 0 12px rgba(211, 47, 47, 0.6)'
+                : 'none',
+              bgcolor: isSelected ? 'rgba(211, 47, 47, 0.15)' : 'transparent'
             }}
           >
             {iconComponent}

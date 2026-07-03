@@ -193,6 +193,37 @@ export const useInteractionManager = () => {
       if (e.key !== 'Delete') return;
 
       const controls = uiState.itemControls;
+      const selectedItems = uiState.selectedItems;
+
+      // Multi-selection: delete all selected items
+      if (selectedItems.length > 0) {
+        for (const item of selectedItems) {
+          try {
+            switch (item.type) {
+              case 'ITEM':
+                scene.deleteViewItem(item.id);
+                scene.deleteModelItem(item.id);
+                break;
+              case 'RECTANGLE':
+                scene.deleteRectangle(item.id);
+                break;
+              case 'CONNECTOR':
+                scene.deleteConnector(item.id);
+                break;
+              case 'TEXTBOX':
+                scene.deleteTextBox(item.id);
+                break;
+            }
+          } catch (e) {
+            // Item may have already been deleted (e.g., connector deleted with rectangle)
+            console.warn('Failed to delete item:', item.id, e);
+          }
+        }
+        uiState.actions.setSelectedItems([]);
+        return;
+      }
+
+      // Single selection: delete item under controls
       if (!controls || controls.type === 'ADD_ITEM') return;
 
       const ref = controls as { type: string; id: string };
@@ -247,6 +278,7 @@ export const useInteractionManager = () => {
     uiState.actions,
     uiState.rendererEl,
     uiState.itemControls,
+    uiState.selectedItems,
     scene
   ]);
 

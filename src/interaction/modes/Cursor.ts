@@ -5,7 +5,8 @@ import {
   ModeActions,
   ModeActionsAction,
   Coords,
-  View
+  View,
+  RubberBand
 } from 'src/types';
 import {
   getItemAtTile,
@@ -15,7 +16,8 @@ import {
   generateId,
   CoordsUtils,
   getAnchorTile,
-  connectorPathTileToGlobal
+  connectorPathTileToGlobal,
+  getItemsInArea
 } from 'src/utils';
 import { useScene } from 'src/hooks/useScene';
 import { DEFAULT_COLOR } from 'src/config';
@@ -78,15 +80,16 @@ const getAnchor = (
 const mousedown: ModeActionsAction = ({
   uiState,
   scene,
+  mouse,
   isRendererInteraction
 }) => {
   if (uiState.mode.type !== 'CURSOR' || !isRendererInteraction) return;
 
   // Right-click: don't select items, just allow panning
-  if (uiState.mouse.mousedown?.button === 2) return;
+  if (mouse.mousedown?.button === 2) return;
 
   const itemAtTile = getItemAtTile({
-    tile: uiState.mouse.position.tile,
+    tile: mouse.position.tile,
     scene
   });
 
@@ -98,6 +101,7 @@ const mousedown: ModeActionsAction = ({
     );
 
     uiState.actions.setItemControls(itemAtTile);
+    uiState.actions.setSelectedItems([]);
   } else {
     uiState.actions.setMode(
       produce(uiState.mode, (draft) => {
@@ -106,6 +110,12 @@ const mousedown: ModeActionsAction = ({
     );
 
     uiState.actions.setItemControls(null);
+
+    // Start rubber band selection
+    uiState.actions.setRubberBand({
+      from: uiState.mouse.position.tile,
+      to: uiState.mouse.position.tile
+    });
   }
 };
 
@@ -148,12 +158,12 @@ export const Cursor: ModeActions = {
     }
   },
   dblclick,
-  mousemove: ({ scene, uiState }) => {
+  mousemove: ({ scene, uiState, mouse }) => {
     if (uiState.mode.type !== 'CURSOR') return;
 
     // Right-click drag: pan the map
-    if (uiState.mouse.mousedown?.button === 2) {
-      const deltaScreen = uiState.mouse.delta?.screen;
+    if (mouse.mousedown?.button === 2) {
+      const deltaScreen = mouse.delta?.screen;
       if (deltaScreen) {
         const newScroll = produce(uiState.scroll, (draft) => {
           draft.position = CoordsUtils.add(draft.position, deltaScreen);
@@ -163,12 +173,22 @@ export const Cursor: ModeActions = {
       return;
     }
 
-    if (!hasMovedTile(uiState.mouse)) return;
+    // Left-click drag on empty space: update rubber band
+    if (!uiState.mode.mousedownItem && uiState.rubberBand) {
+      uiState.actions.setRubberBand(
+        produce(uiState.rubberBand, (draft) => {
+          draft.to = mouse.position.tile;
+        })
+      );
+      return;
+    }
+
+    if (!hasMovedTile(mouse)) return;
 
     let item = uiState.mode.mousedownItem;
 
-    if (item?.type === 'CONNECTOR' && uiState.mouse.mousedown) {
-      const anchor = getAnchor(item.id, uiState.mouse.mousedown.tile, scene);
+    if (item?.type === 'CONNECTOR' && mouse.mousedown) {
+      const anchor = getAnchor(item.id, mouse.mousedown.tile, scene);
 
       item = {
         type: 'CONNECTOR_ANCHOR',
@@ -186,11 +206,12 @@ export const Cursor: ModeActions = {
     }
   },
   mousedown,
-  mouseup: ({ uiState, isRendererInteraction }) => {
+  mouseup: ({ uiState, mouse, isRendererInteraction, scene }) => {
     if (uiState.mode.type !== 'CURSOR' || !isRendererInteraction) return;
 
     const clickedItem = uiState.mode.mousedownItem;
-    const button = uiState.mouse.mousedown?.button;
+    const button = mouse.mousedown?.button;
+    const rubberBand = uiState.rubberBand;
 
     // Reset mousedownItem on mouseup
     uiState.actions.setMode(
@@ -201,6 +222,18 @@ export const Cursor: ModeActions = {
 
     // Right-click release: don't select items
     if (button === 2) return;
+
+    // Rubber band selection: calculate selected items
+    if (rubberBand) {
+      const selected = getItemsInArea({
+        from: rubberBand.from,
+        to: rubberBand.to,
+        scene
+      });
+      uiState.actions.setSelectedItems(selected);
+      uiState.actions.setRubberBand(null);
+      return;
+    }
 
     if (clickedItem) {
       if (clickedItem.type === 'ITEM') {
@@ -224,8 +257,9 @@ export const Cursor: ModeActions = {
           id: clickedItem.id
         });
       }
-    } else {
+    } else if (button === 0) {
       uiState.actions.setItemControls(null);
+      uiState.actions.setSelectedItems([]);
     }
   }
 };

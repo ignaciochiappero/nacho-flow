@@ -29,6 +29,8 @@ const initialState = () => {
         delta: null
       },
       itemControls: null,
+      selectedItems: [],
+      rubberBand: null,
       enableDebugTools: false,
       actions: {
         setView: (view) => {
@@ -79,6 +81,12 @@ const initialState = () => {
         },
         setItemControls: (itemControls) => {
           set({ itemControls });
+        },
+        setSelectedItems: (selectedItems) => {
+          set({ selectedItems });
+        },
+        setRubberBand: (rubberBand) => {
+          set({ rubberBand });
         },
         setContextMenu: (contextMenu) => {
           set({ contextMenu });

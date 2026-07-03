@@ -220,6 +220,7 @@ export const useInteractionManager = () => {
           }
         }
         uiState.actions.setSelectedItems([]);
+        uiState.actions.setItemControls(null);
         return;
       }
 

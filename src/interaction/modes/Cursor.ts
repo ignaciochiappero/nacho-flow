@@ -116,8 +116,14 @@ const mousedown: ModeActionsAction = ({
       }
       uiState.actions.setItemControls(null);
     } else {
+      // If clicking on an already selected item, keep selection (for drag)
+      const isSelected = uiState.selectedItems.some(
+        (item) => item.type === itemAtTile.type && item.id === itemAtTile.id
+      );
+      if (!isSelected) {
+        uiState.actions.setSelectedItems([]);
+      }
       uiState.actions.setItemControls(itemAtTile);
-      uiState.actions.setSelectedItems([]);
     }
   } else {
     uiState.actions.setMode(
@@ -216,10 +222,18 @@ export const Cursor: ModeActions = {
     }
 
     if (item) {
+      // If dragging a selected item, drag all selected items together
+      const isPartOfSelection = uiState.selectedItems.some(
+        (sel) => sel.type === item!.type && sel.id === item!.id
+      );
+      const items = isPartOfSelection && uiState.selectedItems.length > 0
+        ? uiState.selectedItems
+        : [item];
+
       uiState.actions.setMode({
         type: 'DRAG_ITEMS',
         showCursor: true,
-        items: [item],
+        items,
         isInitialMovement: true
       });
     }

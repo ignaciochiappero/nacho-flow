@@ -22,6 +22,7 @@ export interface Mouse {
     screen: Coords;
     tile: Coords;
   } | null;
+  ctrlKey: boolean;
 }
 
 // Mode types

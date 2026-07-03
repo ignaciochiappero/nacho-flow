@@ -299,7 +299,8 @@ export const getMouse = ({
   const nextMouse: Mouse = {
     position: newPosition,
     delta: newDelta,
-    mousedown: getMousedown()
+    mousedown: getMousedown(),
+    ctrlKey: 'ctrlKey' in mouseEvent ? mouseEvent.ctrlKey : false
   };
 
   return nextMouse;

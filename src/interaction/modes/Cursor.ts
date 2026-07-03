@@ -100,8 +100,25 @@ const mousedown: ModeActionsAction = ({
       })
     );
 
-    uiState.actions.setItemControls(itemAtTile);
-    uiState.actions.setSelectedItems([]);
+    if (mouse.ctrlKey) {
+      // Ctrl+Click: toggle item in multi-selection
+      const isSelected = uiState.selectedItems.some(
+        (item) => item.type === itemAtTile.type && item.id === itemAtTile.id
+      );
+      if (isSelected) {
+        uiState.actions.setSelectedItems(
+          uiState.selectedItems.filter(
+            (item) => !(item.type === itemAtTile.type && item.id === itemAtTile.id)
+          )
+        );
+      } else {
+        uiState.actions.setSelectedItems([...uiState.selectedItems, itemAtTile]);
+      }
+      uiState.actions.setItemControls(null);
+    } else {
+      uiState.actions.setItemControls(itemAtTile);
+      uiState.actions.setSelectedItems([]);
+    }
   } else {
     uiState.actions.setMode(
       produce(uiState.mode, (draft) => {
@@ -111,11 +128,13 @@ const mousedown: ModeActionsAction = ({
 
     uiState.actions.setItemControls(null);
 
-    // Start rubber band selection
-    uiState.actions.setRubberBand({
-      from: uiState.mouse.position.tile,
-      to: uiState.mouse.position.tile
-    });
+    // Start rubber band selection (not on Ctrl+Click)
+    if (!mouse.ctrlKey) {
+      uiState.actions.setRubberBand({
+        from: uiState.mouse.position.tile,
+        to: uiState.mouse.position.tile
+      });
+    }
   }
 };
 
@@ -211,6 +230,7 @@ export const Cursor: ModeActions = {
 
     const clickedItem = uiState.mode.mousedownItem;
     const button = mouse.mousedown?.button;
+    const isCtrl = mouse.ctrlKey;
     const rubberBand = uiState.rubberBand;
 
     // Reset mousedownItem on mouseup
@@ -234,6 +254,9 @@ export const Cursor: ModeActions = {
       uiState.actions.setRubberBand(null);
       return;
     }
+
+    // Ctrl+Click: don't set itemControls (multi-selection handled in mousedown)
+    if (isCtrl) return;
 
     if (clickedItem) {
       if (clickedItem.type === 'ITEM') {

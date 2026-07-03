@@ -26,7 +26,8 @@ const initialState = () => {
       mouse: {
         position: { screen: CoordsUtils.zero(), tile: CoordsUtils.zero() },
         mousedown: null,
-        delta: null
+        delta: null,
+        ctrlKey: false
       },
       itemControls: null,
       selectedItems: [],

@@ -16,6 +16,7 @@ export interface Mouse {
   mousedown: {
     screen: Coords;
     tile: Coords;
+    button: number;
   } | null;
   delta: {
     screen: Coords;

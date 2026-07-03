@@ -44,6 +44,7 @@ const getModeFunction = (mode: ModeActions, e: SlimMouseEvent) => {
 export const useInteractionManager = () => {
   const rendererRef = useRef<HTMLElement>();
   const reducerTypeRef = useRef<string>();
+  const rightClickStartRef = useRef<{ x: number; y: number } | null>(null);
   const uiState = useUiStateStore((state) => {
     return state;
   });
@@ -56,6 +57,13 @@ export const useInteractionManager = () => {
   const onMouseEvent = useCallback(
     (e: SlimMouseEvent) => {
       if (!rendererRef.current) return;
+
+      // Track right-click start position for drag detection
+      if (e.type === 'mousedown' && e.button === 2) {
+        rightClickStartRef.current = { x: e.clientX, y: e.clientY };
+      } else if (e.type === 'mouseup') {
+        rightClickStartRef.current = null;
+      }
 
       const mode = modes[uiState.mode.type];
       const modeFunction = getModeFunction(mode, e);
@@ -107,6 +115,20 @@ export const useInteractionManager = () => {
     (e: SlimMouseEvent) => {
       e.preventDefault();
 
+      // Suppress context menu if user right-clicked and dragged (panned)
+      if (rightClickStartRef.current) {
+        const dx = e.clientX - rightClickStartRef.current.x;
+        const dy = e.clientY - rightClickStartRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > 5) {
+          // Was a drag, not a click — suppress context menu
+          rightClickStartRef.current = null;
+          return;
+        }
+      }
+
+      rightClickStartRef.current = null;
+
       const itemAtTile = getItemAtTile({
         tile: uiState.mouse.position.tile,
         scene
@@ -134,7 +156,8 @@ export const useInteractionManager = () => {
         ...e,
         clientX: Math.floor(e.touches[0].clientX),
         clientY: Math.floor(e.touches[0].clientY),
-        type: 'mousedown'
+        type: 'mousedown',
+        button: 0
       });
     };
 
@@ -143,7 +166,8 @@ export const useInteractionManager = () => {
         ...e,
         clientX: Math.floor(e.touches[0].clientX),
         clientY: Math.floor(e.touches[0].clientY),
-        type: 'mousemove'
+        type: 'mousemove',
+        button: 0
       });
     };
 
@@ -152,7 +176,8 @@ export const useInteractionManager = () => {
         ...e,
         clientX: 0,
         clientY: 0,
-        type: 'mouseup'
+        type: 'mouseup',
+        button: 0
       });
     };
 

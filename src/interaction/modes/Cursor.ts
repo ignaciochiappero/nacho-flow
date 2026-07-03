@@ -82,6 +82,9 @@ const mousedown: ModeActionsAction = ({
 }) => {
   if (uiState.mode.type !== 'CURSOR' || !isRendererInteraction) return;
 
+  // Right-click: don't select items, just allow panning
+  if (uiState.mouse.mousedown?.button === 2) return;
+
   const itemAtTile = getItemAtTile({
     tile: uiState.mouse.position.tile,
     scene
@@ -146,7 +149,21 @@ export const Cursor: ModeActions = {
   },
   dblclick,
   mousemove: ({ scene, uiState }) => {
-    if (uiState.mode.type !== 'CURSOR' || !hasMovedTile(uiState.mouse)) return;
+    if (uiState.mode.type !== 'CURSOR') return;
+
+    // Right-click drag: pan the map
+    if (uiState.mouse.mousedown?.button === 2) {
+      const deltaScreen = uiState.mouse.delta?.screen;
+      if (deltaScreen) {
+        const newScroll = produce(uiState.scroll, (draft) => {
+          draft.position = CoordsUtils.add(draft.position, deltaScreen);
+        });
+        uiState.actions.setScroll(newScroll);
+      }
+      return;
+    }
+
+    if (!hasMovedTile(uiState.mouse)) return;
 
     let item = uiState.mode.mousedownItem;
 
@@ -172,36 +189,43 @@ export const Cursor: ModeActions = {
   mouseup: ({ uiState, isRendererInteraction }) => {
     if (uiState.mode.type !== 'CURSOR' || !isRendererInteraction) return;
 
-    if (uiState.mode.mousedownItem) {
-      if (uiState.mode.mousedownItem.type === 'ITEM') {
-        uiState.actions.setItemControls({
-          type: 'ITEM',
-          id: uiState.mode.mousedownItem.id
-        });
-      } else if (uiState.mode.mousedownItem.type === 'RECTANGLE') {
-        uiState.actions.setItemControls({
-          type: 'RECTANGLE',
-          id: uiState.mode.mousedownItem.id
-        });
-      } else if (uiState.mode.mousedownItem.type === 'CONNECTOR') {
-        uiState.actions.setItemControls({
-          type: 'CONNECTOR',
-          id: uiState.mode.mousedownItem.id
-        });
-      } else if (uiState.mode.mousedownItem.type === 'TEXTBOX') {
-        uiState.actions.setItemControls({
-          type: 'TEXTBOX',
-          id: uiState.mode.mousedownItem.id
-        });
-      }
-    } else {
-      uiState.actions.setItemControls(null);
-    }
+    const clickedItem = uiState.mode.mousedownItem;
+    const button = uiState.mouse.mousedown?.button;
 
+    // Reset mousedownItem on mouseup
     uiState.actions.setMode(
       produce(uiState.mode, (draft) => {
         draft.mousedownItem = null;
       })
     );
+
+    // Right-click release: don't select items
+    if (button === 2) return;
+
+    if (clickedItem) {
+      if (clickedItem.type === 'ITEM') {
+        uiState.actions.setItemControls({
+          type: 'ITEM',
+          id: clickedItem.id
+        });
+      } else if (clickedItem.type === 'RECTANGLE') {
+        uiState.actions.setItemControls({
+          type: 'RECTANGLE',
+          id: clickedItem.id
+        });
+      } else if (clickedItem.type === 'CONNECTOR') {
+        uiState.actions.setItemControls({
+          type: 'CONNECTOR',
+          id: clickedItem.id
+        });
+      } else if (clickedItem.type === 'TEXTBOX') {
+        uiState.actions.setItemControls({
+          type: 'TEXTBOX',
+          id: clickedItem.id
+        });
+      }
+    } else {
+      uiState.actions.setItemControls(null);
+    }
   }
 };

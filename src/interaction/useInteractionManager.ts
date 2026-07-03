@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useModelStore } from 'src/stores/modelStore';
 import { useUiStateStore } from 'src/stores/uiStateStore';
-import { ModeActions, State, SlimMouseEvent } from 'src/types';
+import { ModeActions, State, SlimMouseEvent, ItemControls } from 'src/types';
 import { getMouse, getItemAtTile } from 'src/utils';
 import { useResizeObserver } from 'src/hooks/useResizeObserver';
 import { useScene } from 'src/hooks/useScene';
@@ -189,6 +189,33 @@ export const useInteractionManager = () => {
       }
     };
 
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete') return;
+
+      const controls = uiState.itemControls;
+      if (!controls || controls.type === 'ADD_ITEM') return;
+
+      const ref = controls as { type: string; id: string };
+
+      switch (ref.type) {
+        case 'ITEM':
+          scene.deleteViewItem(ref.id);
+          scene.deleteModelItem(ref.id);
+          break;
+        case 'RECTANGLE':
+          scene.deleteRectangle(ref.id);
+          break;
+        case 'CONNECTOR':
+          scene.deleteConnector(ref.id);
+          break;
+        case 'TEXTBOX':
+          scene.deleteTextBox(ref.id);
+          break;
+      }
+
+      uiState.actions.setItemControls(null);
+    };
+
     el.addEventListener('mousemove', onMouseEvent);
     el.addEventListener('mousedown', onMouseEvent);
     el.addEventListener('mouseup', onMouseEvent);
@@ -197,6 +224,7 @@ export const useInteractionManager = () => {
     el.addEventListener('touchstart', onTouchStart);
     el.addEventListener('touchmove', onTouchMove);
     el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('keydown', onKeyDown);
     uiState.rendererEl?.addEventListener('wheel', onScroll);
 
     return () => {
@@ -208,6 +236,7 @@ export const useInteractionManager = () => {
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('keydown', onKeyDown);
       uiState.rendererEl?.removeEventListener('wheel', onScroll);
     };
   }, [
@@ -216,7 +245,9 @@ export const useInteractionManager = () => {
     uiState.mode.type,
     onContextMenu,
     uiState.actions,
-    uiState.rendererEl
+    uiState.rendererEl,
+    uiState.itemControls,
+    scene
   ]);
 
   const setInteractionsElement = useCallback((element: HTMLElement) => {

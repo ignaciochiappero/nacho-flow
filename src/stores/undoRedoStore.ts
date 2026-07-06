@@ -20,7 +20,7 @@ interface UndoRedoState {
   clear: () => void;
 }
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 100;
 
 let lastSnapshot: Snapshot | null = null;
 let snapshotTimer: ReturnType<typeof setTimeout> | null = null;

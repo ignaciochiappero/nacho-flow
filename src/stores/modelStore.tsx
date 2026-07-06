@@ -19,6 +19,13 @@ const ModelContext = createContext<ReturnType<typeof initialState> | null>(
   null
 );
 
+// Module-level reference for non-hook access (undo/redo)
+let modelStoreRef: ReturnType<typeof initialState> | null = null;
+export const getModelStore = () => {
+  if (!modelStoreRef) throw new Error('ModelStore not initialized');
+  return modelStoreRef;
+};
+
 interface ProviderProps {
   children: React.ReactNode;
 }
@@ -30,6 +37,7 @@ export const ModelProvider = ({ children }: ProviderProps) => {
 
   if (!storeRef.current) {
     storeRef.current = initialState();
+    modelStoreRef = storeRef.current;
   }
 
   return (

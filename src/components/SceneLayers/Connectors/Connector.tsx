@@ -92,13 +92,22 @@ export const Connector = ({ connector: _connector, isSelected }: Props) => {
     <Box style={css}>
       <Svg
         style={{
-          // TODO: The original x coordinates of each tile seems to be calculated wrongly.
-          // They are mirrored along the x-axis.  The hack below fixes this, but we should
-          // try to fix this issue at the root of the problem (might have further implications).
           transform: 'scale(-1, 1)'
         }}
         viewboxSize={pxSize}
       >
+        {isSelected && (
+          <polyline
+            points={pathString}
+            stroke="#d32f2f"
+            strokeWidth={connectorWidthPx * 2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={strokeDashArray}
+            fill="none"
+            strokeOpacity={0.35}
+          />
+        )}
         <polyline
           points={pathString}
           stroke={theme.palette.common.white}
@@ -111,7 +120,7 @@ export const Connector = ({ connector: _connector, isSelected }: Props) => {
         />
         <polyline
           points={pathString}
-          stroke={getColorVariant(color.value, 'dark', { grade: 1 })}
+          stroke={isSelected ? '#d32f2f' : getColorVariant(color.value, 'dark', { grade: 1 })}
           strokeWidth={connectorWidthPx}
           strokeLinecap="round"
           strokeLinejoin="round"

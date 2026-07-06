@@ -19,6 +19,12 @@ const SceneContext = createContext<ReturnType<typeof initialState> | null>(
   null
 );
 
+let sceneStoreRef: ReturnType<typeof initialState> | null = null;
+export const getSceneStore = () => {
+  if (!sceneStoreRef) throw new Error('SceneStore not initialized');
+  return sceneStoreRef;
+};
+
 interface ProviderProps {
   children: React.ReactNode;
 }
@@ -30,6 +36,7 @@ export const SceneProvider = ({ children }: ProviderProps) => {
 
   if (!storeRef.current) {
     storeRef.current = initialState();
+    sceneStoreRef = storeRef.current;
   }
 
   return (

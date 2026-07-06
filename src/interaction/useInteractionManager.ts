@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useModelStore } from 'src/stores/modelStore';
 import { useUiStateStore } from 'src/stores/uiStateStore';
+import { initUndoRedo, performUndo, performRedo } from 'src/stores/undoRedoStore';
 import { ModeActions, State, SlimMouseEvent, ItemControls } from 'src/types';
 import { getMouse, getItemAtTile } from 'src/utils';
 import { useResizeObserver } from 'src/hooks/useResizeObserver';
@@ -147,6 +148,10 @@ export const useInteractionManager = () => {
   );
 
   useEffect(() => {
+    initUndoRedo();
+  }, []);
+
+  useEffect(() => {
     if (uiState.mode.type === 'INTERACTIONS_DISABLED') return;
 
     const el = window;
@@ -190,6 +195,23 @@ export const useInteractionManager = () => {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
+      // Undo: Ctrl+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        performUndo();
+        return;
+      }
+
+      // Redo: Ctrl+Y or Ctrl+Shift+Z
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey)
+      ) {
+        e.preventDefault();
+        performRedo();
+        return;
+      }
+
       if (e.key !== 'Delete') return;
 
       const controls = uiState.itemControls;

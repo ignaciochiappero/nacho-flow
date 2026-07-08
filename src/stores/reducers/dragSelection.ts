@@ -8,7 +8,7 @@ import {
   getAnchorTile,
   isWithinBounds,
   getBoundingBox,
-  translateConnectorPath
+  getConnectorPath
 } from 'src/utils';
 import { syncConnector } from './connector';
 import { State, ViewReducerContext } from './types';
@@ -106,7 +106,8 @@ const collectConnectorIds = (
     }
 
     if (item.type === 'ITEM') {
-      getConnectorsByViewItem(item.id, view.connectors ?? []).forEach(
+      const connected = getConnectorsByViewItem(item.id, view.connectors ?? []);
+      connected.forEach(
         (connector) => {
           connectorIds.add(connector.id);
         }
@@ -206,14 +207,9 @@ const expandLinkedConnectorIds = (
 
 export const resolveDragConnectors = (items: ItemReference[], view: View) => {
   const expandedItems = expandDragItems(items, view);
-  const connectorIdsToMove = expandTileLinkedConnectorIds(
-    collectConnectorIds(expandedItems, view),
-    view
-  );
-  const connectorIdsToSync = expandLinkedConnectorIds(
-    connectorIdsToMove,
-    view
-  );
+  const rawConnectorIds = collectConnectorIds(expandedItems, view);
+  const connectorIdsToMove = expandTileLinkedConnectorIds(rawConnectorIds, view);
+  const connectorIdsToSync = expandLinkedConnectorIds(connectorIdsToMove, view);
 
   return {
     expandedItems,
@@ -285,14 +281,19 @@ export const applyDragDelta = (
     });
 
     connectorIdsToMove.forEach((connectorId) => {
-      const sceneConnector = draft.scene.connectors[connectorId];
+      const connector = getItemByIdOrThrow(
+        draftView.value.connectors ?? [],
+        connectorId
+      );
 
-      if (!sceneConnector?.path) {
-        return;
-      }
-
+      // Recompute path from updated anchors + item positions (realtime)
+      // instead of translating the old path, so connectors stay connected
+      // to non-dragged items during the drag.
       draft.scene.connectors[connectorId] = {
-        path: translateConnectorPath(sceneConnector.path, delta)
+        path: getConnectorPath({
+          anchors: connector.value.anchors,
+          view: draftView.value
+        })
       };
     });
   });

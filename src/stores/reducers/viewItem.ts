@@ -25,10 +25,12 @@ export const updateViewItem = (
         view.value.connectors ?? []
       );
 
+      console.log('[updateViewItem] tile changed for', id, 'connectors to sync:', connectorsToUpdate.map(c => c.id));
+
       const updatedConnectors = connectorsToUpdate.reduce((acc, connector) => {
         return reducers.view({
-          action: 'UPDATE_CONNECTOR',
-          payload: connector,
+          action: 'SYNC_CONNECTOR',
+          payload: connector.id,
           ctx: { viewId, state: acc }
         });
       }, draft);

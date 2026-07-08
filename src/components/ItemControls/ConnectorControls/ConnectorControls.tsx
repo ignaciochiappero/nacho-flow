@@ -63,7 +63,7 @@ export const ConnectorControls = ({ id }: Props) => {
           }}
         >
           {Object.values(connectorStyleOptions).map((style) => {
-            return <MenuItem value={style}>{style}</MenuItem>;
+            return <MenuItem key={style} value={style}>{style}</MenuItem>;
           })}
         </Select>
       </Section>

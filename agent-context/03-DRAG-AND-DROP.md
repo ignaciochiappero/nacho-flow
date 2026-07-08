@@ -123,3 +123,40 @@ function getAnchor(position, connector, scene): Anchor | null {
 - `src/interaction/modes/DragItems.ts` — Multi-item drag logic
 - `src/interaction/modes/ConnectorAnchor.ts` — Anchor drag logic
 - `src/utils/anchor.ts` — `getAnchor` utility
+
+---
+
+## CRITICAL: Connector Path Updates During Drag
+
+### How it works (fixed)
+
+When items are dragged, `applyDragDelta` in `src/stores/reducers/dragSelection.ts`:
+
+1. **Updates item tiles** in the model draft (immer): `viewItem.value.tile = add(tile, delta)`
+2. **Updates connector anchors** via `moveConnectorByDelta` — ALL `ref.item` anchors are kept unchanged; only `ref.tile` anchors shift by delta
+3. **Recomputes scene connector paths** using `getConnectorPath({ anchors, view: draftView.value })` — reads updated item tiles from the draft
+
+### What NOT to do (the bug)
+
+The original code used `translateConnectorPath(sceneConnector.path, delta)` which simply shifted ALL tiles in the path by delta. This caused:
+- Both ends of the connector to move, even though one end is attached to a non-dragged item
+- Visual disconnect during drag (connector appears to "pull away" from the non-dragged item)
+- Correct path only restored on mouseup when `syncDragConnectors` recomputed from scratch
+
+### Key functions
+
+- `getConnectorPath` (renderer.ts:352) — computes full path from anchors + view positions. Use during drag.
+- `translateConnectorPath` (renderer.ts:431) — shifts existing path by delta. NOT suitable for drag (loses anchor-item relationships).
+- `moveConnectorByDelta` (renderer.ts:598) — updates connector anchors for drag. Keeps `ref.item` anchors unchanged.
+- `syncConnector` (connector.ts:22) — recomputes path on mouseup via `getConnectorPath`.
+
+### The flow
+
+```
+mousemove → applyDragDelta(items, delta)
+  → produce(state, draft):
+    1. Update item tiles in draft.model.views
+    2. moveConnectorByDelta for connectorIdsToMove (keeps ref.item anchors)
+    3. getConnectorPath for each moved connector (reads updated items from draft)
+  → syncConnector for syncOnlyIds (non-moved connectors)
+```

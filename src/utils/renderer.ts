@@ -606,7 +606,10 @@ export const moveConnectorByDelta = (
   return {
     ...connector,
     anchors: connector.anchors.map((anchor) => {
-      if (anchor.ref.item && attachedItemIds.has(anchor.ref.item)) {
+      // Item anchors always keep their ref.item — getAnchorTile resolves the
+      // current position from the view, so the path stays connected to the item
+      // even after the dragged item moves to a new tile.
+      if (anchor.ref.item) {
         return anchor;
       }
 
@@ -614,6 +617,7 @@ export const moveConnectorByDelta = (
         return anchor;
       }
 
+      // Tile anchors (fixed positions) shift by delta to follow the drag
       const tile = getAnchorTile(anchor, view);
 
       return {

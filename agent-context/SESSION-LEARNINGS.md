@@ -134,7 +134,7 @@ Both are in `UiState` store (`src/stores/uiStateStore.tsx`).
 - Snapshot-based: captures `Model` (items, views, icons, colors) + `Scene` (connectors, textBoxes)
 - Debounced snapshots (50ms) to avoid duplicates
 - `isUndoing` flag prevents recursive snapshot capture during restore
-- MAX_HISTORY = 50
+- MAX_HISTORY = 100
 - Subscribes to BOTH modelStore and sceneStore changes
 - `performUndo`/`performRedo` call `setState` on both stores
 
@@ -194,6 +194,30 @@ Touch events are converted to mouse events for the interaction system. Always se
 onMouseEvent({ ...e, clientX, clientY, type: 'mousedown', button: 0 });
 ```
 
+### 8. Connector Path Recomputation vs Translation (CRITICAL)
+
+**NEVER use `translateConnectorPath` during drag.** It shifts all tiles by delta, breaking connections to non-dragged items.
+
+**Always use `getConnectorPath({ anchors, view })`** to recompute paths from the updated model. The view items have already been updated in the immer draft, so `getAnchorTile` resolves correct positions.
+
+```ts
+// WRONG — both ends shift, disconnecting from non-dragged items
+draft.scene.connectors[id] = { path: translateConnectorPath(path, delta) };
+
+// CORRECT — recomputes from updated anchors + item positions
+draft.scene.connectors[id] = {
+  path: getConnectorPath({ anchors: connector.value.anchors, view: draftView.value })
+};
+```
+
+### 9. `moveConnectorByDelta` Anchor Rules
+
+- **`ref.item` anchors**: ALWAYS keep unchanged. `getAnchorTile` resolves the current position from the view.
+- **`ref.tile` anchors**: Shift by delta (fixed position that needs to follow the drag).
+- **`ref.anchor` anchors**: Keep unchanged (resolved recursively).
+
+The old code converted non-dragged `ref.item` anchors to `ref.tile` with `old_tile + delta`. This permanently broke the item connection because `ref.tile` doesn't track item movement.
+
 ---
 
 ## File Reference
@@ -216,8 +240,13 @@ onMouseEvent({ ...e, clientX, clientY, type: 'mousedown', button: 0 });
 - `src/interaction/modes/Cursor.ts` — All cursor mode logic
 - `src/interaction/modes/DragItems.ts` — Multi-item drag
 
+### Reducers
+- `src/stores/reducers/dragSelection.ts` — `applyDragDelta`, `syncDragConnectors`, `resolveDragConnectors`
+- `src/stores/reducers/connector.ts` — `syncConnector`, `updateConnector`, `deleteConnector`
+- `src/stores/reducers/viewItem.ts` — `updateViewItem` (SYNC_CONNECTOR on tile change)
+
 ### Utils
-- `src/utils/renderer.ts` — `getItemAtTile`, `getBoundingBox`, `isWithinBounds`
+- `src/utils/renderer.ts` — `getItemAtTile`, `getBoundingBox`, `isWithinBounds`, `getConnectorPath` (line 352), `translateConnectorPath` (line 431), `moveConnectorByDelta` (line 598), `getAnchorTile` (line 315), `getConnectorsByViewItem` (line 700)
 - `src/utils/selection.ts` — `getItemsInArea` (rubber band)
 - `src/utils/CoordsUtils.ts` — Coordinate math
 - `src/utils/index.ts` — Re-exports

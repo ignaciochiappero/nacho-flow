@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState } from 'react';
 import { InitialData, IconCollectionState } from 'src/types';
 import { INITIAL_DATA, INITIAL_SCENE_STATE } from 'src/config';
 import {
@@ -6,17 +6,49 @@ import {
   CoordsUtils,
   categoriseIcons,
   generateId,
-  getItemByIdOrThrow
+  getItemByIdOrThrow,
+  parseAndPrepareModel,
+  formatValidationErrors
 } from 'src/utils';
 import * as reducers from 'src/stores/reducers';
 import { useModelStore } from 'src/stores/modelStore';
 import { useView } from 'src/hooks/useView';
 import { useUiStateStore } from 'src/stores/uiStateStore';
-import { modelSchema } from 'src/schemas/model';
+import { undoRedoStore } from 'src/stores/undoRedoStore';
+
+export type LoadOptions = {
+  fitToView?: boolean;
+  viewId?: string;
+  resetUi?: boolean;
+  clearUndo?: boolean;
+};
+
+export type LoadResult =
+  | { success: true }
+  | { success: false; message: string };
+
+const ensureDefaultView = (initialData: InitialData): InitialData => {
+  if (initialData.views.length > 0) {
+    return initialData;
+  }
+
+  const updates = reducers.view({
+    action: 'CREATE_VIEW',
+    payload: {},
+    ctx: {
+      state: { model: initialData, scene: INITIAL_SCENE_STATE },
+      viewId: generateId()
+    }
+  });
+
+  return {
+    ...initialData,
+    ...updates.model
+  };
+};
 
 export const useInitialDataManager = () => {
   const [isReady, setIsReady] = useState(false);
-  const prevInitialData = useRef<InitialData>();
   const model = useModelStore((state) => {
     return state;
   });
@@ -29,47 +61,47 @@ export const useInitialDataManager = () => {
   const { changeView } = useView();
 
   const load = useCallback(
-    (_initialData: InitialData) => {
-      if (!_initialData || prevInitialData.current === _initialData) return;
+    (rawData: unknown, options: LoadOptions = {}): LoadResult => {
+      if (rawData == null) {
+        return { success: false, message: 'No model data provided.' };
+      }
 
+      uiStateActions.setIsModelLoading(true);
       setIsReady(false);
 
-      const validationResult = modelSchema.safeParse(_initialData);
+      const parsed = parseAndPrepareModel(rawData);
 
-      if (!validationResult.success) {
-        // TODO: let's get better at reporting error messages here (starting with how we present them to users)
-        // - not in console but in a modal
-        console.log(validationResult.error.errors);
-        window.alert('There is an error in your model.');
-        return;
+      if (!parsed.success) {
+        setIsReady(true);
+        uiStateActions.setIsModelLoading(false);
+        return {
+          success: false,
+          message: formatValidationErrors(parsed.errors)
+        };
       }
 
-      const initialData = _initialData;
+      const initialData = ensureDefaultView(parsed.data);
 
-      if (initialData.views.length === 0) {
-        const updates = reducers.view({
-          action: 'CREATE_VIEW',
-          payload: {},
-          ctx: {
-            state: { model: initialData, scene: INITIAL_SCENE_STATE },
-            viewId: generateId()
-          }
-        });
-
-        Object.assign(initialData, updates.model);
+      if (options.clearUndo !== false) {
+        undoRedoStore.getState().clear();
       }
 
-      prevInitialData.current = initialData;
       model.actions.set(initialData);
 
-      const view = getItemByIdOrThrow(
-        initialData.views,
-        initialData.view ?? initialData.views[0].id
-      );
+      const viewId =
+        options.viewId ?? initialData.view ?? initialData.views[0].id;
+
+      const view = getItemByIdOrThrow(initialData.views, viewId);
 
       changeView(view.value.id, initialData);
 
-      if (initialData.fitToView) {
+      if (options.resetUi !== false) {
+        uiStateActions.resetUiState();
+      }
+
+      const shouldFitToView = options.fitToView ?? initialData.fitToView;
+
+      if (shouldFitToView) {
         const rendererSize = rendererEl?.getBoundingClientRect();
 
         const { zoom, scroll } = getFitToViewParams(view.value, {
@@ -95,15 +127,20 @@ export const useInitialDataManager = () => {
       });
 
       uiStateActions.setIconCategoriesState(categoriesState);
-
       setIsReady(true);
+      uiStateActions.setIsModelLoading(false);
+
+      return { success: true };
     },
     [changeView, model.actions, rendererEl, uiStateActions]
   );
 
   const clear = useCallback(() => {
-    load({ ...INITIAL_DATA, icons: model.icons, colors: model.colors });
-    uiStateActions.resetUiState();
+    load(
+      { ...INITIAL_DATA, icons: model.icons, colors: model.colors },
+      { resetUi: true, clearUndo: true }
+    );
+    uiStateActions.setCurrentProject(null, null);
   }, [load, model.icons, model.colors, uiStateActions]);
 
   return {

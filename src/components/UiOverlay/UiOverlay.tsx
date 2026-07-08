@@ -1,6 +1,15 @@
-import React, { useCallback, useMemo, useRef } from 'react';
-import { Box, useTheme, Typography, Stack } from '@mui/material';
-import { ChevronRight } from '@mui/icons-material';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Box,
+  useTheme,
+  Typography,
+  Stack,
+  IconButton,
+  Tooltip,
+  Snackbar,
+  Alert
+} from '@mui/material';
+import { ChevronRight, FolderOpen, Save as SaveIcon } from '@mui/icons-material';
 import { EditorModeEnum } from 'src/types';
 import { UiElement } from 'components/UiElement/UiElement';
 import { SceneLayer } from 'src/components/SceneLayer/SceneLayer';
@@ -16,6 +25,7 @@ import { ContextMenuManager } from 'src/components/ContextMenu/ContextMenuManage
 import { useScene } from 'src/hooks/useScene';
 import { useModelStore } from 'src/stores/modelStore';
 import { ExportImageDialog } from '../ExportImageDialog/ExportImageDialog';
+import { ProjectManager } from 'src/components/ProjectManager/ProjectManager';
 
 const ToolsEnum = {
   MAIN_MENU: 'MAIN_MENU',
@@ -72,6 +82,9 @@ export const UiOverlay = () => {
   const dialog = useUiStateStore((state) => {
     return state.dialog;
   });
+  const isProjectManagerOpen = useUiStateStore((state) => {
+    return state.isProjectManagerOpen;
+  });
   const itemControls = useUiStateStore((state) => {
     return state.itemControls;
   });
@@ -88,7 +101,54 @@ export const UiOverlay = () => {
   const title = useModelStore((state) => {
     return state.title;
   });
+  const currentProjectTitle = useUiStateStore((state) => state.currentProjectTitle);
+  const currentProjectId = useUiStateStore((state) => state.currentProjectId);
+  const forceSaveCallback = useUiStateStore((state) => state.forceSaveCallback);
   const { size: rendererSize } = useResizeObserver(rendererEl);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const handleForceSave = useCallback(async () => {
+    if (!currentProjectId) {
+      setSaveFeedback({
+        open: true,
+        message: 'No project is open',
+        severity: 'error'
+      });
+      return;
+    }
+
+    if (!forceSaveCallback) {
+      setSaveFeedback({
+        open: true,
+        message: 'Save is not ready yet',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const saved = await forceSaveCallback();
+
+      setSaveFeedback({
+        open: true,
+        message: saved ? 'Project saved' : 'Failed to save project',
+        severity: saved ? 'success' : 'error'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentProjectId, forceSaveCallback]);
 
   return (
     <>
@@ -148,6 +208,47 @@ export const UiOverlay = () => {
             }}
           >
             <ZoomControls />
+          </Box>
+        )}
+
+        {currentProjectTitle && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: appPadding.y,
+              left: appPadding.x + 50,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              zIndex: 1
+            }}
+          >
+            <FolderOpen sx={{ fontSize: 14, color: 'primary.main', opacity: 0.7 }} />
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 500,
+                maxWidth: 200,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {currentProjectTitle}
+            </Typography>
+            <Tooltip title="Save project">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleForceSave}
+                  disabled={isSaving}
+                  sx={{ ml: 0.5 }}
+                >
+                  <SaveIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Box>
         )}
 
@@ -234,10 +335,31 @@ export const UiOverlay = () => {
         />
       )}
 
+      {isProjectManagerOpen && (
+        <ProjectManager
+          open={isProjectManagerOpen}
+          onClose={() => uiStateActions.setIsProjectManagerOpen(false)}
+        />
+      )}
+
       <SceneLayer>
         <Box ref={contextMenuAnchorRef} />
         <ContextMenuManager anchorEl={contextMenuAnchorRef.current} />
       </SceneLayer>
+
+      <Snackbar
+        open={saveFeedback.open}
+        autoHideDuration={3000}
+        onClose={() => setSaveFeedback((state) => ({ ...state, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={saveFeedback.severity}
+          onClose={() => setSaveFeedback((state) => ({ ...state, open: false }))}
+        >
+          {saveFeedback.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

@@ -156,6 +156,11 @@ export interface UiState {
   mouse: Mouse;
   rendererEl: HTMLDivElement | null;
   enableDebugTools: boolean;
+  isProjectManagerOpen: boolean;
+  currentProjectId: string | null;
+  currentProjectTitle: string | null;
+  forceSaveCallback: (() => Promise<boolean>) | null;
+  isModelLoading: boolean;
 }
 
 export interface UiStateActions {
@@ -178,6 +183,10 @@ export interface UiStateActions {
   setMouse: (mouse: Mouse) => void;
   setRendererEl: (el: HTMLDivElement) => void;
   setEnableDebugTools: (enabled: boolean) => void;
+  setIsProjectManagerOpen: (isOpen: boolean) => void;
+  setCurrentProject: (id: string | null, title: string | null) => void;
+  setForceSaveCallback: (callback: (() => Promise<boolean>) | null) => void;
+  setIsModelLoading: (isModelLoading: boolean) => void;
 }
 
 export type UiStateStore = UiState & {

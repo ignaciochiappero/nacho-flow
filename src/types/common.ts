@@ -38,7 +38,8 @@ export const MainMenuOptionsEnum = {
   'ACTION.CLEAR_CANVAS': 'ACTION.CLEAR_CANVAS',
   'LINK.GITHUB': 'LINK.GITHUB',
   'LINK.DISCORD': 'LINK.DISCORD',
-  VERSION: 'VERSION'
+  VERSION: 'VERSION',
+  'PROJECT.MANAGER': 'PROJECT.MANAGER'
 } as const;
 
 export type MainMenuOptions = (keyof typeof MainMenuOptionsEnum)[];

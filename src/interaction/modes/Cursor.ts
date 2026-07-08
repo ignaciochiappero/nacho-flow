@@ -17,7 +17,11 @@ import {
   CoordsUtils,
   getAnchorTile,
   connectorPathTileToGlobal,
-  getItemsInArea
+  getItemsInArea,
+  getAnchorAtViewTile,
+  isItemInSelection,
+  getDragItemsForSelection,
+  getAnchorParent
 } from 'src/utils';
 import { useScene } from 'src/hooks/useScene';
 import { DEFAULT_COLOR } from 'src/config';
@@ -93,37 +97,71 @@ const mousedown: ModeActionsAction = ({
     scene
   });
 
-  if (itemAtTile) {
+  let resolvedItem = itemAtTile;
+
+  if (itemAtTile?.type === 'CONNECTOR') {
+    const connector = getItemByIdOrThrow(scene.connectors, itemAtTile.id).value;
+    const anchorOnTile = getAnchorAtViewTile(
+      mouse.position.tile,
+      connector,
+      scene.currentView
+    );
+
+    if (anchorOnTile) {
+      resolvedItem = {
+        type: 'CONNECTOR_ANCHOR',
+        id: anchorOnTile.id
+      };
+    }
+  }
+
+  const selectionItem =
+    resolvedItem?.type === 'CONNECTOR_ANCHOR'
+      ? {
+          type: 'CONNECTOR' as const,
+          id: getAnchorParent(resolvedItem.id, scene.connectors).id
+        }
+      : resolvedItem;
+
+  if (resolvedItem) {
     uiState.actions.setMode(
       produce(uiState.mode, (draft) => {
-        draft.mousedownItem = itemAtTile;
+        draft.mousedownItem = resolvedItem;
       })
     );
 
     if (mouse.ctrlKey) {
-      // Ctrl+Click: toggle item in multi-selection
-      const isSelected = uiState.selectedItems.some(
-        (item) => item.type === itemAtTile.type && item.id === itemAtTile.id
-      );
-      if (isSelected) {
+      const isSelected = selectionItem
+        ? uiState.selectedItems.some(
+            (item) =>
+              item.type === selectionItem.type && item.id === selectionItem.id
+          )
+        : false;
+
+      if (isSelected && selectionItem) {
         uiState.actions.setSelectedItems(
           uiState.selectedItems.filter(
-            (item) => !(item.type === itemAtTile.type && item.id === itemAtTile.id)
+            (item) =>
+              !(item.type === selectionItem.type && item.id === selectionItem.id)
           )
         );
-      } else {
-        uiState.actions.setSelectedItems([...uiState.selectedItems, itemAtTile]);
+      } else if (selectionItem) {
+        uiState.actions.setSelectedItems([
+          ...uiState.selectedItems,
+          selectionItem
+        ]);
       }
       uiState.actions.setItemControls(null);
     } else {
-      // If clicking on an already selected item, keep selection (for drag)
-      const isSelected = uiState.selectedItems.some(
-        (item) => item.type === itemAtTile.type && item.id === itemAtTile.id
+      const isSelected = isItemInSelection(
+        resolvedItem,
+        uiState.selectedItems,
+        scene.connectors
       );
       if (!isSelected) {
         uiState.actions.setSelectedItems([]);
       }
-      uiState.actions.setItemControls(itemAtTile);
+      uiState.actions.setItemControls(selectionItem ?? resolvedItem);
     }
   } else {
     uiState.actions.setMode(
@@ -212,7 +250,11 @@ export const Cursor: ModeActions = {
 
     let item = uiState.mode.mousedownItem;
 
-    if (item?.type === 'CONNECTOR' && mouse.mousedown) {
+    const isConnectorGroupDrag =
+      item?.type === 'CONNECTOR' &&
+      isItemInSelection(item, uiState.selectedItems, scene.connectors);
+
+    if (item?.type === 'CONNECTOR' && mouse.mousedown && !isConnectorGroupDrag) {
       const anchor = getAnchor(item.id, mouse.mousedown.tile, scene);
 
       item = {
@@ -222,13 +264,11 @@ export const Cursor: ModeActions = {
     }
 
     if (item) {
-      // If dragging a selected item, drag all selected items together
-      const isPartOfSelection = uiState.selectedItems.some(
-        (sel) => sel.type === item!.type && sel.id === item!.id
+      const items = getDragItemsForSelection(
+        item,
+        uiState.selectedItems,
+        scene.connectors
       );
-      const items = isPartOfSelection && uiState.selectedItems.length > 0
-        ? uiState.selectedItems
-        : [item];
 
       uiState.actions.setMode({
         type: 'DRAG_ITEMS',

@@ -20,7 +20,14 @@ module.exports = {
       '.csb.app', // So Codesandbox.io can run the dev server
       '.ngrok-free.app'
     ],
-    port: 3000
+    port: 3000,
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    ]
   },
   module: {
     rules: [

@@ -16,4 +16,6 @@ export interface IsoflowProps {
   enableDebugTools?: boolean;
   editorMode?: keyof typeof EditorModeEnum;
   renderer?: RendererProps;
+  projectId?: string | null;
+  autoSave?: boolean;
 }

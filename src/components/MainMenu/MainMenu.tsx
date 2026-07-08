@@ -7,7 +7,8 @@ import {
   DataObject as ExportJsonIcon,
   ImageOutlined as ExportImageIcon,
   FolderOpen as FolderOpenIcon,
-  DeleteOutline as DeleteOutlineIcon
+  DeleteOutline as DeleteOutlineIcon,
+  Storage as StorageIcon
 } from '@mui/icons-material';
 import { UiElement } from 'src/components/UiElement/UiElement';
 import { IconButton } from 'src/components/IconButton/IconButton';
@@ -56,18 +57,37 @@ export const MainMenu = () => {
       const file = (event.target as HTMLInputElement).files?.[0];
 
       if (!file) {
-        throw new Error('No file selected');
+        return;
       }
 
       const fileReader = new FileReader();
 
       fileReader.onload = async (e) => {
-        const modelData = JSON.parse(e.target?.result as string);
-        load(modelData);
-      };
-      fileReader.readAsText(file);
+        try {
+          const raw = e.target?.result;
+          if (typeof raw !== 'string') {
+            throw new Error('Invalid file contents');
+          }
 
-      uiStateActions.resetUiState();
+          const modelData = JSON.parse(raw);
+          uiStateActions.setCurrentProject(null, null);
+
+          const result = load(modelData, { fitToView: true, resetUi: true });
+
+          if (!result.success) {
+            window.alert(`Could not open model:\n${result.message}`);
+            return;
+          }
+        } catch {
+          window.alert('The selected file is not valid JSON.');
+        }
+      };
+
+      fileReader.onerror = () => {
+        window.alert('Failed to read the selected file.');
+      };
+
+      fileReader.readAsText(file);
     };
 
     await fileInput.click();
@@ -90,6 +110,11 @@ export const MainMenu = () => {
     clear();
     uiStateActions.setIsMainMenuOpen(false);
   }, [uiStateActions, clear]);
+
+  const onOpenProjectManager = useCallback(() => {
+    uiStateActions.setIsProjectManagerOpen(true);
+    uiStateActions.setIsMainMenuOpen(false);
+  }, [uiStateActions]);
 
   const sectionVisibility = useMemo(() => {
     return {
@@ -154,6 +179,12 @@ export const MainMenu = () => {
           {mainMenuOptions.includes('ACTION.CLEAR_CANVAS') && (
             <MenuItem onClick={onClearCanvas} Icon={<DeleteOutlineIcon />}>
               Clear the canvas
+            </MenuItem>
+          )}
+
+          {mainMenuOptions.includes('PROJECT.MANAGER') && (
+            <MenuItem onClick={onOpenProjectManager} Icon={<StorageIcon />}>
+              Projects
             </MenuItem>
           )}
 

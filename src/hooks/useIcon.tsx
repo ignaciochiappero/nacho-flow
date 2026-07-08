@@ -21,9 +21,14 @@ export const useIcon = (id: string | undefined) => {
     setHasLoaded(false);
   }, [icon.url]);
 
-  const iconComponent = useMemo(() => {
+  useEffect(() => {
     if (!icon.isIsometric) {
       setHasLoaded(true);
+    }
+  }, [icon.isIsometric, icon.url]);
+
+  const iconComponent = useMemo(() => {
+    if (!icon.isIsometric) {
       return <NonIsometricIcon icon={icon} />;
     }
 

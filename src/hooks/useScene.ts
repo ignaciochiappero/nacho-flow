@@ -6,7 +6,8 @@ import {
   TextBox,
   Rectangle,
   ItemReference,
-  LayerOrderingAction
+  LayerOrderingAction,
+  Coords
 } from 'src/types';
 import { useUiStateStore } from 'src/stores/uiStateStore';
 import { useModelStore } from 'src/stores/modelStore';
@@ -46,15 +47,17 @@ export const useScene = () => {
   }, [model.colors]);
 
   const connectors = useMemo(() => {
-    return (currentView.connectors ?? []).map((connector) => {
-      const sceneConnector = scene.connectors[connector.id];
+    return (currentView.connectors ?? [])
+      .filter((connector) => scene.connectors[connector.id]?.path)
+      .map((connector) => {
+        const sceneConnector = scene.connectors[connector.id];
 
-      return {
-        ...CONNECTOR_DEFAULTS,
-        ...connector,
-        ...sceneConnector
-      };
-    });
+        return {
+          ...CONNECTOR_DEFAULTS,
+          ...connector,
+          ...sceneConnector
+        };
+      });
   }, [currentView.connectors, scene.connectors]);
 
   const rectangles = useMemo(() => {
@@ -67,15 +70,17 @@ export const useScene = () => {
   }, [currentView.rectangles]);
 
   const textBoxes = useMemo(() => {
-    return (currentView.textBoxes ?? []).map((textBox) => {
-      const sceneTextBox = scene.textBoxes[textBox.id];
+    return (currentView.textBoxes ?? [])
+      .filter((textBox) => scene.textBoxes[textBox.id]?.size)
+      .map((textBox) => {
+        const sceneTextBox = scene.textBoxes[textBox.id];
 
-      return {
-        ...TEXTBOX_DEFAULTS,
-        ...textBox,
-        ...sceneTextBox
-      };
-    });
+        return {
+          ...TEXTBOX_DEFAULTS,
+          ...textBox,
+          ...sceneTextBox
+        };
+      });
   }, [currentView.textBoxes, scene.textBoxes]);
 
   const getState = useCallback(() => {
@@ -273,6 +278,28 @@ export const useScene = () => {
     [getState, setState, currentViewId]
   );
 
+  const applyDragDelta = useCallback(
+    (items: ItemReference[], delta: Coords) => {
+      const newState = reducers.applyDragDelta(items, delta, {
+        viewId: currentViewId,
+        state: getState()
+      });
+      setState(newState);
+    },
+    [getState, setState, currentViewId]
+  );
+
+  const syncDragConnectors = useCallback(
+    (items: ItemReference[]) => {
+      const newState = reducers.syncDragConnectors(items, {
+        viewId: currentViewId,
+        state: getState()
+      });
+      setState(newState);
+    },
+    [getState, setState, currentViewId]
+  );
+
   return {
     items,
     connectors,
@@ -295,6 +322,8 @@ export const useScene = () => {
     createRectangle,
     updateRectangle,
     deleteRectangle,
-    changeLayerOrder
+    changeLayerOrder,
+    applyDragDelta,
+    syncDragConnectors
   };
 };

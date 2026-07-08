@@ -33,6 +33,11 @@ const initialState = () => {
       selectedItems: [],
       rubberBand: null,
       enableDebugTools: false,
+      isProjectManagerOpen: false,
+      currentProjectId: null,
+      currentProjectTitle: null,
+      forceSaveCallback: null,
+      isModelLoading: false,
       actions: {
         setView: (view) => {
           set({ view });
@@ -54,6 +59,9 @@ const initialState = () => {
               offset: CoordsUtils.zero()
             },
             itemControls: null,
+            selectedItems: [],
+            rubberBand: null,
+            contextMenu: null,
             zoom: 1
           });
         },
@@ -100,6 +108,18 @@ const initialState = () => {
         },
         setRendererEl: (el) => {
           set({ rendererEl: el });
+        },
+        setIsProjectManagerOpen: (isProjectManagerOpen) => {
+          set({ isProjectManagerOpen });
+        },
+        setCurrentProject: (currentProjectId, currentProjectTitle) => {
+          set({ currentProjectId, currentProjectTitle });
+        },
+        setForceSaveCallback: (forceSaveCallback) => {
+          set({ forceSaveCallback });
+        },
+        setIsModelLoading: (isModelLoading) => {
+          set({ isModelLoading });
         }
       }
     };

@@ -1,7 +1,63 @@
 import { produce } from 'immer';
-import { Model, ModelStore } from 'src/types';
+import { z } from 'zod';
+import { InitialData, Model, ModelStore } from 'src/types';
+import { INITIAL_DATA } from 'src/config';
+import { modelSchema } from 'src/schemas/model';
 import { validateModel } from 'src/schemas/validation';
 import { getItemByIdOrThrow } from './common';
+
+export type ModelParseResult =
+  | { success: true; data: InitialData }
+  | { success: false; errors: z.ZodIssue[] };
+
+export const formatValidationErrors = (errors: z.ZodIssue[]): string => {
+  return errors
+    .map((error) => {
+      const path = error.path.length > 0 ? `${error.path.join('.')}: ` : '';
+      return `${path}${error.message}`;
+    })
+    .join('\n');
+};
+
+export const parseAndPrepareModel = (raw: unknown): ModelParseResult => {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {
+      success: false,
+      errors: [
+        {
+          code: z.ZodIssueCode.custom,
+          path: [],
+          message: 'Model must be a JSON object.'
+        }
+      ]
+    };
+  }
+
+  const merged: InitialData = {
+    ...INITIAL_DATA,
+    ...(raw as InitialData)
+  };
+
+  let candidate: InitialData = merged;
+  let result = modelSchema.safeParse(candidate);
+
+  if (!result.success) {
+    candidate = fixModel(candidate);
+    result = modelSchema.safeParse(candidate);
+  }
+
+  if (!result.success) {
+    return { success: false, errors: result.error.errors };
+  }
+
+  return {
+    success: true,
+    data: {
+      ...INITIAL_DATA,
+      ...result.data
+    }
+  };
+};
 
 export const fixModel = (model: Model): Model => {
   const issues = validateModel(model);

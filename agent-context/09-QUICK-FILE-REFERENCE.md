@@ -58,6 +58,28 @@
 | `src/hooks/useModelItem.ts` | Model item (find, not findIndex) |
 | `src/hooks/useIsoProjection.ts` | Isometric positioning |
 | `src/hooks/useIcon.tsx` | Icon resolution with fallback |
+| `src/hooks/useAutoSave.ts` | Debounced auto-save (1s) |
+
+## Services
+
+| File | Purpose |
+|------|---------|
+| `src/services/api.ts` | HTTP client for backend API |
+
+## Components (UI)
+
+| File | Purpose |
+|------|---------|
+| `src/components/ProjectManager/ProjectManager.tsx` | Project management dialog |
+
+## Server
+
+| File | Purpose |
+|------|---------|
+| `server/index.ts` | Express server entry point (port 3001) |
+| `server/database.ts` | SQLite setup using sql.js (WASM) |
+| `server/routes/projects.ts` | CRUD + export/import routes |
+| `server/types/sql.js.d.ts` | Type declarations for sql.js |
 
 ## Config
 

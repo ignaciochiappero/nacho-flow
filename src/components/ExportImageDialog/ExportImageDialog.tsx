@@ -23,7 +23,8 @@ import {
   downloadFile as downloadFileUtil,
   base64ToBlob,
   generateGenericFilename,
-  modelFromModelStore
+  modelFromModelStore,
+  getStartingMode
 } from 'src/utils';
 import { ModelStore } from 'src/types';
 import { useDiagramUtils } from 'src/hooks/useDiagramUtils';
@@ -50,6 +51,9 @@ export const ExportImageDialog = ({ onClose, quality = 1.5 }: Props) => {
   const uiStateActions = useUiStateStore((state) => {
     return state.actions;
   });
+  const editorMode = useUiStateStore((state) => {
+    return state.editorMode;
+  });
   const model = useModelStore((state): Omit<ModelStore, 'actions'> => {
     return modelFromModelStore(state);
   });
@@ -63,7 +67,11 @@ export const ExportImageDialog = ({ onClose, quality = 1.5 }: Props) => {
       type: 'INTERACTIONS_DISABLED',
       showCursor: false
     });
-  }, [uiStateActions]);
+
+    return () => {
+      uiStateActions.setMode(getStartingMode(editorMode));
+    };
+  }, [uiStateActions, editorMode]);
 
   const exportImage = useCallback(async () => {
     if (!containerRef.current) return;

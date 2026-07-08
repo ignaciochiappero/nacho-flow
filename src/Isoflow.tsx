@@ -12,6 +12,7 @@ import { UiOverlay } from 'src/components/UiOverlay/UiOverlay';
 import { UiStateProvider, useUiStateStore } from 'src/stores/uiStateStore';
 import { INITIAL_DATA, MAIN_MENU_OPTIONS } from 'src/config';
 import { useInitialDataManager } from 'src/hooks/useInitialDataManager';
+import { useAutoSave } from 'src/hooks/useAutoSave';
 
 const App = ({
   initialData,
@@ -21,7 +22,9 @@ const App = ({
   onModelUpdated,
   enableDebugTools = false,
   editorMode = 'EDITABLE',
-  renderer
+  renderer,
+  projectId = null,
+  autoSave = false
 }: IsoflowProps) => {
   const uiStateActions = useUiStateStore((state) => {
     return state.actions;
@@ -30,11 +33,27 @@ const App = ({
   const model = useModelStore((state) => {
     return modelFromModelStore(state);
   });
+  const currentProjectId = useUiStateStore((state) => {
+    return state.currentProjectId;
+  });
+  const isModelLoading = useUiStateStore((state) => {
+    return state.isModelLoading;
+  });
 
   const { load } = initialDataManager;
 
+  const effectiveProjectId = projectId ?? currentProjectId;
+  const autoSaveEnabled =
+    (autoSave || Boolean(effectiveProjectId)) && !isModelLoading;
+
+  const { forceSave } = useAutoSave(model, effectiveProjectId, autoSaveEnabled);
+
   useEffect(() => {
-    load({ ...INITIAL_DATA, ...initialData });
+    uiStateActions.setForceSaveCallback(forceSave);
+  }, [forceSave, uiStateActions]);
+
+  useEffect(() => {
+    load({ ...INITIAL_DATA, ...initialData }, { resetUi: false, clearUndo: false });
   }, [initialData, load]);
 
   useEffect(() => {

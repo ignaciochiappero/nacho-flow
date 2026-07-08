@@ -428,6 +428,19 @@ export const connectorPathTileToGlobal = (
   );
 };
 
+export const translateConnectorPath = (
+  path: { tiles: Coords[]; rectangle: Rect },
+  delta: Coords
+) => {
+  return {
+    tiles: path.tiles,
+    rectangle: {
+      from: CoordsUtils.add(path.rectangle.from, delta),
+      to: CoordsUtils.add(path.rectangle.to, delta)
+    }
+  };
+};
+
 export const getTextBoxEndTile = (textBox: TextBox, size: Size) => {
   if (textBox.orientation === ProjectionOrientationEnum.X) {
     return CoordsUtils.add(textBox.tile, {
@@ -580,6 +593,78 @@ export const getAnchorAtTile = (tile: Coords, anchors: ConnectorAnchor[]) => {
       anchor.ref.tile && CoordsUtils.isEqual(anchor.ref.tile, tile)
     );
   });
+};
+
+export const moveConnectorByDelta = (
+  connector: Connector,
+  delta: Coords,
+  view: View,
+  options?: { attachedItemIds?: Set<string> }
+): Connector => {
+  const attachedItemIds = options?.attachedItemIds ?? new Set<string>();
+
+  return {
+    ...connector,
+    anchors: connector.anchors.map((anchor) => {
+      if (anchor.ref.item && attachedItemIds.has(anchor.ref.item)) {
+        return anchor;
+      }
+
+      if (anchor.ref.anchor) {
+        return anchor;
+      }
+
+      const tile = getAnchorTile(anchor, view);
+
+      return {
+        ...anchor,
+        ref: { tile: CoordsUtils.add(tile, delta) }
+      };
+    })
+  };
+};
+
+export const getAnchorAtViewTile = (
+  tile: Coords,
+  connector: Connector,
+  view: View
+): ConnectorAnchor | undefined => {
+  return connector.anchors.find((anchor) => {
+    return CoordsUtils.isEqual(getAnchorTile(anchor, view), tile);
+  });
+};
+
+export const isItemInSelection = (
+  item: ItemReference,
+  selectedItems: ItemReference[],
+  connectors: Connector[]
+): boolean => {
+  return selectedItems.some((selected) => {
+    if (selected.type === item.type && selected.id === item.id) {
+      return true;
+    }
+
+    if (item.type === 'CONNECTOR_ANCHOR') {
+      const parent = getAnchorParent(item.id, connectors);
+      return selected.type === 'CONNECTOR' && selected.id === parent.id;
+    }
+
+    return false;
+  });
+};
+
+export const getDragItemsForSelection = (
+  item: ItemReference,
+  selectedItems: ItemReference[],
+  connectors: Connector[]
+): ItemReference[] => {
+  const isPartOfSelection = isItemInSelection(item, selectedItems, connectors);
+
+  if (isPartOfSelection && selectedItems.length > 0) {
+    return selectedItems;
+  }
+
+  return [item];
 };
 
 export const getAnchorParent = (anchorId: string, connectors: Connector[]) => {

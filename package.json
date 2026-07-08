@@ -12,6 +12,8 @@
   "types": "./dist/Isoflow.d.ts",
   "scripts": {
     "start": "webpack serve --config ./webpack/dev.config.js",
+    "start:server": "cd server && npm run dev",
+    "start:full": "concurrently \"npm run start\" \"npm run start:server\"",
     "dev": "nodemon --watch ./src/ -e ts,tsx --exec npm run build",
     "build": "webpack --config ./webpack/prod.config.js && tsc --declaration --emitDeclarationOnly && tsc-alias",
     "test": "jest",

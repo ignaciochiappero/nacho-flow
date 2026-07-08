@@ -1,0 +1,14 @@
+{
+  "name": "isoflow-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "sql.js": "^1.10.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

@@ -203,7 +203,7 @@ const dblclick: ModeActionsAction = ({ uiState, scene, mouse }) => {
 
     scene.createRectangle({
       id: generateId(),
-      color: DEFAULT_COLOR.id,
+      color: scene.colors[0]?.id ?? DEFAULT_COLOR.id,
       from: { x: cellTile.x - 1, y: cellTile.y - 1 },
       to: { x: cellTile.x + 1, y: cellTile.y + 1 }
     });

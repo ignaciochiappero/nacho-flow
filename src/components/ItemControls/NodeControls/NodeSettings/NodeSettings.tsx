@@ -1,5 +1,9 @@
 import React from 'react';
-import { Slider, Box, TextField } from '@mui/material';
+import { Slider, Box, TextField, Stack, Typography, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import {
+  Flip as FlipHorizontal,
+  Flip as FlipVertical
+} from '@mui/icons-material';
 import { ModelItem, ViewItem } from 'src/types';
 import { MarkdownEditor } from 'src/components/MarkdownEditor/MarkdownEditor';
 import { useModelItem } from 'src/hooks/useModelItem';
@@ -63,6 +67,23 @@ export const NodeSettings = ({
           />
         </Section>
       )}
+      <Section title="Flip">
+        <Stack direction="row" spacing={2} alignItems="center">
+          <ToggleButtonGroup
+            value={node.flipX ? ['flipX'] : []}
+            onChange={(e, newFlips) => {
+              onViewItemUpdated({
+                flipX: newFlips.includes('flipX')
+              });
+            }}
+            size="small"
+          >
+            <ToggleButton value="flipX" sx={{ textTransform: 'none' }}>
+              ↔ Horizontal
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+      </Section>
       <Section>
         <Box>
           <DeleteButton onClick={onDeleted} />

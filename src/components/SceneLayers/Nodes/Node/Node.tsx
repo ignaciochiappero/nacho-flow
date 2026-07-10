@@ -91,6 +91,9 @@ export const Node = ({ node, order, isSelected }: Props) => {
                 : 'none',
               bgcolor: isSelected ? 'rgba(211, 47, 47, 0.15)' : 'transparent'
             }}
+            style={{
+              transform: node.flipX ? 'scaleX(-1)' : undefined
+            }}
           >
             {iconComponent}
           </Box>
